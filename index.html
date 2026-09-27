@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142820">
+  <meta name="description" content="A browser-playable Filipino Mahjong table with Flores, five-set hands, and familiar Pinoy calls.">
+  <title>Pinoy Mahjong — The Filipino Table</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Pinoy Mahjong home">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>Pinoy Mahjong</strong><small>THE FILIPINO TABLE</small></span>
+      </a>
+      <div class="top-actions">
+        <div class="round-chip"><span class="live-dot"></span><span id="roundLabel">HAND 1</span></div>
+        <button id="rulesButton" class="icon-button" type="button" aria-label="Open rules" title="Rules">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.8 9a2.3 2.3 0 1 1 3.8 1.7c-1 .8-1.6 1.2-1.6 2.5M12 17.2h.01"></path></svg>
+        </button>
+        <button id="newGameButton" class="quiet-button" type="button">New game</button>
+      </div>
+    </header>
+
+    <section class="intro-row">
+      <div>
+        <p class="eyebrow">PHILIPPINE 16-TILE PROFILE</p>
+        <h1>Make your <em>báhay.</em></h1>
+        <p class="intro-copy">Five sets and a pair. Watch the discards, mind your Flores, and call your win.</p>
+      </div>
+      <div class="legend-card">
+        <span class="legend-symbol">16</span>
+        <span><strong>tiles in hand</strong><small>17 to win · 5 báhay + a pair</small></span>
+      </div>
+    </section>
+
+    <section class="table-card" aria-label="Mahjong table">
+      <div class="table-toolbar">
+        <div class="table-caption"><span class="table-caption-mark">✦</span> THE TABLE <span class="table-divider">/</span> <span id="wallCount">WALL 144</span></div>
+        <div id="statusPill" class="status-pill"><span class="status-dot"></span><span id="statusText">Shuffling the tiles…</span></div>
+      </div>
+
+      <div class="play-mat">
+        <section id="seat-2" class="seat seat-top" aria-label="Opponent across the table"></section>
+        <section id="seat-1" class="seat seat-left" aria-label="Opponent on your left"></section>
+        <section class="center-well" aria-label="Table center">
+          <div class="well-rings"><span>MAHJONG</span><strong>🀄</strong><small>FILIPINO STYLE</small></div>
+          <div id="lastDiscard" class="last-discard"></div>
+          <div id="claimTray" class="claim-tray" aria-live="polite"></div>
+        </section>
+        <section id="seat-3" class="seat seat-right" aria-label="Opponent on your right"></section>
+        <section id="seat-0" class="seat seat-bottom" aria-label="Your seat"></section>
+      </div>
+
+      <div class="action-bar">
+        <div class="action-hint" id="actionHint">Your table is ready.</div>
+        <div class="action-buttons" id="actionButtons"></div>
+      </div>
+    </section>
+
+    <footer class="footer-row">
+      <div class="score-strip" id="scoreStrip" aria-label="Scores"></div>
+      <div class="footer-note"><span class="footer-flower">✿</span> Flores are shown and replaced from the back wall.</div>
+    </footer>
+  </main>
+
+  <div id="rulesDialog" class="dialog-backdrop" hidden>
+    <section class="rules-dialog" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+      <button id="closeRulesButton" class="dialog-close" type="button" aria-label="Close rules">×</button>
+      <p class="eyebrow">A TABLE GUIDE</p>
+      <h2 id="rulesTitle">Filipino Mahjong,<br><em>the way we play it.</em></h2>
+      <p class="rules-intro">Filipino Mahjong has family and regional variations. This table uses one documented Philippine 16-tile profile; Jokers and pot rules are off.</p>
+      <div class="rules-grid">
+        <article><span class="rule-number">01</span><h3>Make a hand</h3><p>Keep 16 suited tiles between turns. Win with five sets and a pair. A set is a Chow (three in a row, same suit) or Pung (three alike). A Kang is four alike and needs a replacement draw. Mano passes clockwise each hand.</p></article>
+        <article><span class="rule-number">02</span><h3>Mind your Flores</h3><p>Winds, Dragons, Flowers, and Seasons are Flores here. Reveal one when drawn, then replace it from the back of the wall. Only Balls, Sticks, and Characters make sets.</p></article>
+        <article><span class="rule-number">03</span><h3>Call with care</h3><p>Chow only from the player before you. Pung and Kang may use any discard. Todas (win on a discard) outranks Kang, then Pung, then Chow.</p></article>
+        <article><span class="rule-number">04</span><h3>Win &amp; score</h3><p>Bunot is a self-drawn win; Todas is a discard win. Both 5 sets + a pair and Siete Pares (7 pairs + a set) are accepted. Todas charges the discarder 2× and others 1×; Bunot charges all 2×. Secret Kang pays 1 point per opponent. Flush, Puro Pung, concealed, no Flores, Siete Pares, and Escalera add multipliers.</p></article>
+      </div>
+      <div class="rules-footer"><span>THIS PROFILE: 144 TILES · NO JOKERS · NO POT</span><button id="gotItButton" class="primary-button" type="button">Back to the table</button></div>
+    </section>
+  </div>
+
+  <div id="resultDialog" class="dialog-backdrop" hidden>
+    <section class="result-dialog" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <span class="result-spark">✦</span>
+      <p class="eyebrow" id="resultEyebrow">HAND COMPLETE</p>
+      <h2 id="resultTitle">Mahjong!</h2>
+      <p id="resultCopy"></p>
+      <div id="resultScore" class="result-score"></div>
+      <button id="nextHandButton" class="primary-button" type="button">Deal the next hand</button>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
