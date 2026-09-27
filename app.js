@@ -103,6 +103,7 @@ function createGame(keepScores, nextHandNumber) {
     pending: null,
     claimOptions: [],
     botClaims: [],
+    blockedClaimOptions: [],
     message: "Shuffling the tiles…",
     lastDiscard: null,
     history: [],
@@ -457,17 +458,35 @@ function beginClaims() {
   if (!pending) return;
   state.claimOptions = [];
   state.botClaims = [];
+  state.blockedClaimOptions = [];
+  let userOptions = [];
   for (let offset = 1; offset < 4; offset += 1) {
     const index = (pending.from + offset) % 4;
     const player = state.players[index];
     const options = legalDiscardClaims(player, pending.tile, pending.from);
     if (index === 0) {
-      state.claimOptions = options;
+      userOptions = options;
     } else {
       const choice = chooseBotClaim(options);
       if (choice) state.botClaims.push({ player: index, option: choice, distance: offset });
     }
   }
+  const userDistance = (0 - pending.from + 4) % 4;
+  state.claimOptions = userOptions.filter(function (option) {
+    const blockers = state.botClaims.filter(function (claim) {
+      return claim.option.priority > option.priority ||
+        (claim.option.priority === option.priority && claim.distance < userDistance);
+    });
+    if (blockers.length) {
+      blockers.forEach(function (claim) {
+        if (!state.blockedClaimOptions.some(function (blocked) {
+          return blocked.player === claim.player && blocked.option.type === claim.option.type;
+        })) state.blockedClaimOptions.push(claim);
+      });
+      return false;
+    }
+    return true;
+  });
   render();
   if (state.claimOptions.length) return;
   window.setTimeout(function () { resolveClaims(null); }, state.botClaims.length ? 500 : 180);
@@ -953,7 +972,10 @@ function renderClaimTray() {
     tray.innerHTML = "";
     return;
   }
-  const label = state.claimOptions.length ? "YOUR CALL" : (state.botClaims.length ? "CALL READY" : "CLAIM WINDOW");
+  const priorityCall = state.blockedClaimOptions[0];
+  const label = state.claimOptions.length
+    ? "YOUR CALL"
+    : (priorityCall ? "WAITING ON " + priorityCall.option.label.toUpperCase() : (state.botClaims.length ? "CALL READY" : "CLAIM WINDOW"));
   tray.innerHTML = '<span class="claim-chip">' + label + '</span><span class="claim-arrow">← ' + state.players[state.pending.from].name + '</span>';
 }
 
@@ -1010,14 +1032,23 @@ function renderActions() {
   let buttons = "";
   if (state.phase === "claim") {
     if (state.claimOptions.length) {
-      hint.textContent = "That discard can help your hand. Choose a call or pass.";
+      hint.textContent = state.blockedClaimOptions.length
+        ? "Only calls that beat the higher-priority claim are available. Choose one or pass."
+        : "That discard can help your hand. Choose a call or pass.";
       state.claimOptions.forEach(function (option, index) {
         const label = option.type === "win" ? "TODAS · WIN" : option.label.toUpperCase();
         buttons += '<button type="button" class="action-button' + (option.type === "win" ? " gold" : "") + '" data-claim-index="' + index + '">' + label + '</button>';
       });
       buttons += buttonMarkup("Pass", "pass", "", false);
     } else {
-      hint.textContent = "Waiting for the table to answer the discard…";
+      if (state.blockedClaimOptions.length) {
+        const calls = state.blockedClaimOptions.map(function (claim) {
+          return state.players[claim.player].name + "’s " + claim.option.label;
+        });
+        hint.textContent = "Waiting on " + calls.join(" and ") + ". Your lower-priority call is unavailable.";
+      } else {
+        hint.textContent = "Waiting for the table to answer the discard…";
+      }
       buttons = buttonMarkup("Waiting…", "none", "", true);
     }
   } else if (state.phase === "discard" && state.turn === 0) {
