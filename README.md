@@ -8,6 +8,8 @@ Open index.html in a modern browser. No build step, account, or network connecti
 
 Select a tile in your hand, then choose **Discard**. When another player throws a tile you can use, choose the offered call or pass. On your own draw, declare **Bunot** if you complete a hand, or discard to continue. The rules panel in the game explains the calls and scoring.
 
+The recent-action trail calls out draws, Flores replacements, discards, and claims. Claimed tiles remain marked in the discard river, and each called set names the player it came from.
+
 ## Rules profile
 
 This game uses a clearly named Philippine 16-tile profile. Players keep 16 suited tiles between turns and win with five sets and a pair (17 tiles); a Siete Pares hand is also accepted. The 108 suited tiles make sets. Winds, Dragons, Flowers, and Seasons are Flores: expose them and replace them from the back of the wall. Chow is only available from the player immediately before you; Pung, Kang, and Todas may use any discard. Claim priority is Todas, Kang, Pung, then Chow. Mano passes clockwise after each hand.

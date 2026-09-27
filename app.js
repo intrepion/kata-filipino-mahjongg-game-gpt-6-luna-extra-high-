@@ -25,6 +25,7 @@ const FLOWERS = [
 ];
 
 const PLAYER_NAMES = ["You", "Ate Nena", "Lola Tess", "Kuya Jun"];
+const SHORT_NAMES = ["YOU", "NENA", "TESS", "JUN"];
 const SUIT_INDEX = { dots: 0, bamboo: 1, characters: 2 };
 const SUIT_BY_INDEX = ["dots", "bamboo", "characters"];
 const TOTAL_GROUPS = 5;
@@ -104,6 +105,8 @@ function createGame(keepScores, nextHandNumber) {
     botClaims: [],
     message: "Shuffling the tiles…",
     lastDiscard: null,
+    history: [],
+    actionSeq: 0,
     result: null,
     busy: false
   };
@@ -116,8 +119,17 @@ function createGame(keepScores, nextHandNumber) {
   state.phase = "discard";
   state.turn = state.dealer;
   state.message = players[state.dealer].name + " is Mano and discards first.";
+  recordAction({ kind: "dealer", actor: state.dealer });
   render();
   if (state.turn !== 0) window.setTimeout(runBotDiscard, 400);
+}
+
+function recordAction(action) {
+  state.actionSeq += 1;
+  action.id = state.actionSeq;
+  action.at = Date.now();
+  state.history.unshift(action);
+  state.history = state.history.slice(0, 5);
 }
 
 function drawPlayable(player, end) {
@@ -133,6 +145,7 @@ function drawPlayable(player, end) {
     if (tile.kind === "bonus") {
       player.flowers.push(tile);
       state.message = player.name + " reveals " + tile.name + " and takes a replacement.";
+      recordAction({ kind: "flower", actor: player.index, tile: tile, source: "back" });
       if (state.front > state.back) return null;
       end = "back";
       continue;
@@ -435,6 +448,7 @@ function discardTile(playerIndex, handTile) {
   state.selectedTileId = null;
   state.drawnTileId = null;
   state.message = player.name + " discards " + tileName(tile) + ".";
+  recordAction({ kind: "discard", actor: playerIndex, tile: tile });
   beginClaims();
 }
 
@@ -490,15 +504,27 @@ function executeClaim(playerIndex, option) {
   if (!pending) return;
   if (option.type === "win") {
     pending.entry.claimed = true;
+    pending.entry.claimedBy = playerIndex;
+    pending.entry.claimedWith = "Todas";
+    recordAction({ kind: "call", actor: playerIndex, source: pending.from, tile: pending.tile, call: "TODAS · WIN" });
     finishHand(playerIndex, "Todas", pending.from, pending.tile);
     return;
   }
   pending.entry.claimed = true;
+  pending.entry.claimedBy = playerIndex;
+  pending.entry.claimedWith = option.label;
   if (option.type === "kong") {
     removeFromHand(player, option.key, 3);
     const tiles = [pending.tile, pending.tile, pending.tile, pending.tile];
-    player.melds.push({ type: "kong", tiles: tiles, concealed: false });
-    state.message = player.name + " calls Kang and takes a replacement tile.";
+    player.melds.push({
+      type: "kong",
+      tiles: tiles,
+      concealed: false,
+      fromIndex: pending.from,
+      claimedTileId: pending.tile.id
+    });
+    state.message = player.name + " takes " + tileName(pending.tile) + " from " + state.players[pending.from].name + " with Kang.";
+    recordAction({ kind: "call", actor: playerIndex, source: pending.from, tile: pending.tile, call: "KANG" });
     state.pending = null;
     state.turn = playerIndex;
     state.phase = "discard";
@@ -509,6 +535,7 @@ function executeClaim(playerIndex, option) {
     }
     state.drawnTileId = replacement.id;
     sortHand(player.hand);
+    recordAction({ kind: "draw", actor: playerIndex, tile: playerIndex === 0 ? replacement : null, hidden: playerIndex !== 0, source: "back", replacement: true });
     render();
     if (playerIndex !== 0) {
       if (getWinningShape(player.hand, player.melds)) window.setTimeout(function () { finishHand(playerIndex, "Bunot", null); }, 380);
@@ -518,13 +545,26 @@ function executeClaim(playerIndex, option) {
   }
   if (option.type === "pung") {
     removeFromHand(player, option.key, 2);
-    player.melds.push({ type: "pung", tiles: [pending.tile, pending.tile, pending.tile], concealed: false });
+    player.melds.push({
+      type: "pung",
+      tiles: [pending.tile, pending.tile, pending.tile],
+      concealed: false,
+      fromIndex: pending.from,
+      claimedTileId: pending.tile.id
+    });
   } else if (option.type === "chow") {
     removeKeys(player, option.keys);
-    player.melds.push({ type: "chow", tiles: option.keys.concat([tileKey(pending.tile)]).map(function (key) { return tileFromKey(key); }), concealed: false });
+    player.melds.push({
+      type: "chow",
+      tiles: option.keys.map(function (key) { return tileFromKey(key); }).concat([pending.tile]),
+      concealed: false,
+      fromIndex: pending.from,
+      claimedTileId: pending.tile.id
+    });
     player.melds[player.melds.length - 1].tiles.sort(function (a, b) { return tileIndex(a) - tileIndex(b); });
   }
-  state.message = player.name + " calls " + option.label + " and discards next.";
+  state.message = player.name + " takes " + tileName(pending.tile) + " from " + state.players[pending.from].name + " with " + option.label + ".";
+  recordAction({ kind: "call", actor: playerIndex, source: pending.from, tile: pending.tile, call: option.label.toUpperCase() });
   state.pending = null;
   state.turn = playerIndex;
   state.phase = "discard";
@@ -563,6 +603,7 @@ function drawHumanTurn() {
   state.phase = "discard";
   state.drawnTileId = tile.id;
   state.message = "Your turn. Choose a tile to discard, or call Bunot if your hand is complete.";
+  recordAction({ kind: "draw", actor: 0, tile: tile, source: "wall" });
   sortHand(player.hand);
   render();
 }
@@ -584,6 +625,13 @@ async function runBotTurn() {
   }
   state.phase = "discard";
   state.drawnTileId = drawn.id;
+  recordAction({ kind: "draw", actor: player.index, hidden: true, source: "wall" });
+  render();
+  await sleep(340);
+  if (!state || state.phase !== "discard" || state.turn !== player.index) {
+    state.busy = false;
+    return;
+  }
   sortHand(player.hand);
   const shape = getWinningShape(player.hand, player.melds);
   if (shape) {
@@ -669,12 +717,14 @@ function declareKong(playerIndex, option) {
       }
     });
     state.message = player.name + " declares a Secret Kang. Each opponent pays one point.";
+    recordAction({ kind: "secret-kang", actor: playerIndex });
   } else {
     if (!removeFromHand(player, option.key, 1)) return;
     const meld = player.melds[option.meldIndex];
     meld.tiles.push(tileFromKey(option.key));
     meld.type = "kong";
     state.message = player.name + " calls Sagása and upgrades a Pung to Kang.";
+    recordAction({ kind: "sagasa", actor: playerIndex, tile: meld.tiles[0] });
   }
   const replacement = drawPlayable(player, "back");
   if (!replacement) {
@@ -685,6 +735,7 @@ function declareKong(playerIndex, option) {
   state.phase = "discard";
   state.drawnTileId = replacement.id;
   sortHand(player.hand);
+  recordAction({ kind: "draw", actor: playerIndex, tile: playerIndex === 0 ? replacement : null, hidden: playerIndex !== 0, source: "back", replacement: true });
   render();
   if (playerIndex !== 0) {
     if (getWinningShape(player.hand, player.melds)) window.setTimeout(function () { finishHand(playerIndex, "Bunot", null); }, 360);
@@ -723,6 +774,7 @@ function finishHand(winnerIndex, winType, discarderIndex, winningTile) {
     payouts: payouts
   };
   state.message = winner.name + " wins with " + winType + "!";
+  recordAction({ kind: "win", actor: winnerIndex, tile: winningTile || null, winType: winType });
   render();
   showResult();
 }
@@ -734,6 +786,7 @@ function finishDraw() {
   state.busy = false;
   state.result = { draw: true };
   state.message = "The wall is exhausted. This hand is a draw.";
+  recordAction({ kind: "draw-end", actor: state.turn });
   render();
   byId("resultEyebrow").textContent = "WALL EXHAUSTED";
   byId("resultTitle").textContent = "No Mahjong this hand";
@@ -753,7 +806,7 @@ function showResult() {
   byId("resultDialog").hidden = false;
 }
 
-function tileFace(tile, className, extra) {
+function tileFace(tile, className) {
   const classes = ["tile"];
   if (className) classes.push(className);
   if (tile.kind === "bonus") {
@@ -762,20 +815,33 @@ function tileFace(tile, className, extra) {
   }
   const suit = SUITS[SUIT_INDEX[tile.suit]];
   classes.push(suit.color);
-  return '<div class="' + classes.join(" ") + '" title="' + tileName(tile) + (extra || "") + '"><span class="tile-rank">' + tile.rank + '</span><span class="tile-suit">' + suit.short + '</span></div>';
+  return '<div class="' + classes.join(" ") + '" title="' + tileName(tile) + '"><span class="tile-rank">' + tile.rank + '</span><span class="tile-suit">' + suit.short + '</span></div>';
 }
 
-function tinyFace(tile) {
-  if (tile.kind === "bonus") return '<span class="tiny-tile bonus" title="' + tile.name + '">' + tile.label + '</span>';
+function tinyFace(tile, extraClass, title) {
+  const extra = extraClass ? " " + extraClass : "";
+  if (tile.kind === "bonus") return '<span class="tiny-tile bonus' + extra + '" title="' + (title || tile.name) + '">' + tile.label + '</span>';
   const color = tile.suit === "characters" ? " red" : "";
-  return '<span class="tiny-tile' + color + '" title="' + tileName(tile) + '">' + tile.rank + '</span>';
+  const suit = SUITS[SUIT_INDEX[tile.suit]];
+  return '<span class="tiny-tile' + color + extra + '" title="' + (title || tileName(tile)) + '">' + tile.rank + '<small class="tiny-suit">' + suit.short + '</small></span>';
+}
+
+function discardFace(entry) {
+  const owner = entry.claimedBy === undefined ? "" : " · called by " + PLAYER_NAMES[entry.claimedBy];
+  const title = tileName(entry.tile) + " discarded by " + PLAYER_NAMES[entry.from] + owner;
+  return tinyFace(entry.tile, entry.claimed ? "claimed" : "", title);
 }
 
 function seatBadge(index) {
   const parts = [];
   if (index === state.dealer) parts.push('<span class="seat-badge">✦ MANO</span>');
-  if (index === state.turn && state.phase !== "finished") {
-    parts.push('<span class="seat-badge current">' + (state.phase === "claim" ? "CALLS" : "YOUR TURN") + '</span>');
+  if (state.phase === "claim" && state.pending) {
+    if (index === state.turn) parts.push('<span class="seat-badge current">DISCARD</span>');
+    else if (index === 0 && state.claimOptions.length) parts.push('<span class="seat-badge current">YOUR CALL</span>');
+    else if (state.botClaims.some(function (claim) { return claim.player === index; })) parts.push('<span class="seat-badge current">CALL READY</span>');
+  } else if (index === state.turn && state.phase !== "finished") {
+    const label = index === 0 ? (state.phase === "draw" ? "YOUR DRAW" : "YOUR TURN") : (state.phase === "draw" ? "DRAWING" : "DISCARD");
+    parts.push('<span class="seat-badge current">' + label + '</span>');
   }
   return parts.join("");
 }
@@ -783,12 +849,25 @@ function seatBadge(index) {
 function renderMelds(player) {
   if (!player.melds.length) return "";
   return player.melds.map(function (meld) {
+    let marked = false;
     const face = meld.concealed
       ? '<span class="back-tile" aria-label="Face-down tile"></span><span class="back-tile" aria-label="Face-down tile"></span><span class="back-tile" aria-label="Face-down tile"></span><span class="back-tile" aria-label="Face-down tile"></span>'
-      : meld.tiles.map(function (tile) { return tinyFace(tile); }).join("");
+      : meld.tiles.map(function (tile) {
+        const isTakenTile = !marked && meld.claimedTileId !== undefined && tile.id === meld.claimedTileId;
+        if (isTakenTile) marked = true;
+        return tinyFace(tile, isTakenTile ? "taken-origin" : "");
+      }).join("");
     const name = meld.type === "kong" ? (meld.concealed ? "SECRET KANG" : "KANG") : meld.type.toUpperCase();
-    return '<div class="meld-block" title="' + name + '"><span class="meld-name">' + name + '</span>' + face + '</div>';
+    const source = meld.fromIndex === undefined ? "" : '<span class="meld-source">← ' + SHORT_NAMES[meld.fromIndex] + '</span>';
+    return '<div class="meld-block' + (source ? " called-meld" : "") + '" title="' + name + source + '"><span class="meld-name">' + name + '</span>' + source + face + '</div>';
   }).join("");
+}
+
+function highlightEventSeats(seat, index) {
+  const latest = state.history[0];
+  if (!latest) return;
+  if (latest.actor === index) seat.classList.add("event-seat");
+  if (latest.source === index && latest.actor !== index) seat.classList.add("source-seat");
 }
 
 function visibleBacks(player, side) {
@@ -806,9 +885,10 @@ function renderOpponent(index) {
   const seat = byId("seat-" + index);
   seat.className = "seat " + (index === 2 ? "seat-top" : index === 1 ? "seat-left seat-side" : "seat-right seat-side");
   if (state.turn === index && state.phase !== "finished") seat.classList.add("active-seat");
+  highlightEventSeats(seat, index);
   const melds = renderMelds(player);
   const flowers = player.flowers.map(function (tile) { return tinyFace(tile); }).join("");
-  const discards = player.discards.filter(function (entry) { return !entry.claimed; }).slice(-12).map(function (entry) { return tinyFace(entry.tile); }).join("");
+  const discards = player.discards.slice(-12).map(function (entry) { return discardFace(entry); }).join("");
   seat.innerHTML =
     '<div class="seat-head"><div class="seat-name"><span class="seat-name-text">' + player.name + '</span>' + seatBadge(index) + '</div><span class="seat-score">' + player.score + ' pts</span></div>' +
     '<div class="seat-subrow"><div class="back-row">' + visibleBacks(player, side) + '</div><div class="mini-melds">' + melds + '</div><div class="mini-flowers">' + flowers + '</div></div>' +
@@ -820,6 +900,7 @@ function renderHuman() {
   const seat = byId("seat-0");
   seat.className = "seat seat-bottom";
   if (state.turn === 0 && state.phase !== "finished") seat.classList.add("active-seat");
+  highlightEventSeats(seat, 0);
   const melds = renderMelds(player);
   const flowers = player.flowers.map(function (tile) { return tinyFace(tile); }).join("");
   const hand = player.hand.map(function (tile, index) {
@@ -835,7 +916,7 @@ function renderHuman() {
   seat.innerHTML =
     '<div class="seat-head"><div class="seat-name"><span class="seat-name-text">You</span>' + seatBadge(0) + '</div><span class="seat-score">' + player.score + ' pts</span></div>' +
     '<div class="meld-area">' + melds + '</div>' +
-    '<div class="seat-subrow"><div class="mini-flowers">' + flowers + '</div><div class="mini-discards">' + player.discards.filter(function (entry) { return !entry.claimed; }).slice(-9).map(function (entry) { return tinyFace(entry.tile); }).join("") + '</div></div>' +
+    '<div class="seat-subrow"><div class="mini-flowers">' + flowers + '</div><div class="mini-discards">' + player.discards.slice(-9).map(function (entry) { return discardFace(entry); }).join("") + '</div></div>' +
     '<div class="hand-area" id="handArea">' + hand + '</div>' +
     '<div class="player-hand-label"><span>YOUR HAND</span><span class="hand-count">' + player.hand.length + ' TILES</span></div>';
 }
@@ -847,7 +928,18 @@ function renderLastDiscard() {
     return;
   }
   const entry = state.lastDiscard;
-  box.innerHTML = '<div class="discard-focus">' + tileFace(entry.tile, "", "") + '<small>' + state.players[entry.from].name + '<br>discarded</small></div>';
+  const riverEntry = entry.entry;
+  const claimed = riverEntry && riverEntry.claimedBy !== undefined;
+  const tileClass = claimed ? "tile-taken" : "discard-arrive";
+  let detail = state.players[entry.from].name + " discarded";
+  if (claimed) {
+    detail += '<br><span class="discard-taken">TAKEN BY ' + SHORT_NAMES[riverEntry.claimedBy] + ' · ' + riverEntry.claimedWith.toUpperCase() + '</span>';
+  } else if (state.phase === "claim" && state.pending === entry) {
+    detail += '<br><span class="discard-waiting">CLAIM WINDOW OPEN</span>';
+  } else {
+    detail += '<br><span class="discard-resting">IN THE RIVER</span>';
+  }
+  box.innerHTML = '<div class="discard-focus">' + tileFace(entry.tile, tileClass) + '<small><strong>' + tileName(entry.tile) + '</strong><br>' + detail + '</small></div>';
 }
 
 function renderClaimTray() {
@@ -856,7 +948,43 @@ function renderClaimTray() {
     tray.innerHTML = "";
     return;
   }
-  tray.innerHTML = '<span class="claim-chip">' + (state.claimOptions.length ? "YOUR CALL" : "CALLS OPEN") + '</span>';
+  const label = state.claimOptions.length ? "YOUR CALL" : (state.botClaims.length ? "CALL READY" : "CLAIM WINDOW");
+  tray.innerHTML = '<span class="claim-chip">' + label + '</span><span class="claim-arrow">← ' + state.players[state.pending.from].name + '</span>';
+}
+
+function actionDescription(event) {
+  const actor = PLAYER_NAMES[event.actor];
+  if (event.kind === "dealer") return { icon: "MANO", text: actor + " leads the hand with 17 tiles." };
+  if (event.kind === "discard") return { icon: "THROW", text: actor + " discarded ", tile: event.tile };
+  if (event.kind === "call") {
+    return { icon: "CALL", text: actor + " took ", tile: event.tile, after: " from " + PLAYER_NAMES[event.source] + " · " + event.call };
+  }
+  if (event.kind === "draw" && event.replacement) {
+    return { icon: "BACK", text: actor + " took a replacement from the back wall" + (event.tile ? ": " : "."), tile: event.tile };
+  }
+  if (event.kind === "draw") {
+    return { icon: "DRAW", text: actor + (event.hidden ? " drew from the wall." : " drew "), tile: event.hidden ? null : event.tile };
+  }
+  if (event.kind === "flower") return { icon: "FLORES", text: actor + " exposed ", tile: event.tile, after: " as Flores · replacement from back wall" };
+  if (event.kind === "secret-kang") return { icon: "KANG", text: actor + " declared Secret Kang · each opponent pays 1 point." };
+  if (event.kind === "sagasa") return { icon: "KANG", text: actor + " upgraded a Pung to Kang · ", tile: event.tile };
+  if (event.kind === "win") return { icon: "WIN", text: (event.actor === 0 ? "You win with " : actor + " wins with ") + event.winType + (event.tile ? " on " : "."), tile: event.tile };
+  return { icon: "WALL", text: "The wall is exhausted. Hand ends in a draw." };
+}
+
+function renderActivityFeed() {
+  const feed = byId("activityFeed");
+  if (!state.history.length) {
+    feed.innerHTML = '<div class="activity-empty">The table action trail will appear here.</div>';
+    return;
+  }
+  feed.innerHTML = state.history.slice(0, 4).map(function (event, index) {
+    const description = actionDescription(event);
+    const tile = description.tile ? tinyFace(description.tile, "activity-tile") : "";
+    return '<div class="activity-item kind-' + event.kind + (index === 0 ? " activity-new" : "") + '">' +
+      '<span class="activity-kind">' + description.icon + '</span>' +
+      '<span class="activity-copy">' + description.text + tile + (description.after || "") + '</span></div>';
+  }).join("");
 }
 
 function buttonMarkup(label, action, extraClass, disabled, extra) {
@@ -909,13 +1037,15 @@ function render() {
   byId("roundLabel").textContent = "HAND " + state.handNumber;
   byId("wallCount").textContent = "WALL " + remainingWall();
   byId("statusText").textContent = state.message;
-  byId("statusPill").classList.toggle("is-your-turn", state.turn === 0 && state.phase !== "finished");
+  const playerCanAct = (state.turn === 0 && state.phase === "discard") || (state.phase === "claim" && state.claimOptions.length > 0);
+  byId("statusPill").classList.toggle("is-your-turn", playerCanAct);
   renderOpponent(2);
   renderOpponent(1);
   renderOpponent(3);
   renderHuman();
   renderLastDiscard();
   renderClaimTray();
+  renderActivityFeed();
   renderActions();
   renderScores();
 }
