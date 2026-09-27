@@ -8,7 +8,7 @@ Open index.html in a modern browser. No build step, account, or network connecti
 
 Select a tile in your hand, then choose **Discard**. When another player throws a tile you can use, choose the offered call or pass. On your own draw, declare **Bunot** if you complete a hand, or discard to continue. The rules panel in the game explains the calls and scoring.
 
-The recent-action trail calls out draws, Flores replacements, discards, and claims. Claimed tiles remain marked in the discard river, and each called set names the player it came from.
+The table header keeps the latest move in view, while the acting seat and discarded tile are highlighted. Called tiles stay marked in the discard river, and each called set names its source player.
 
 ## Rules profile
 

@@ -930,7 +930,11 @@ function renderLastDiscard() {
   const entry = state.lastDiscard;
   const riverEntry = entry.entry;
   const claimed = riverEntry && riverEntry.claimedBy !== undefined;
-  const tileClass = claimed ? "tile-taken" : "discard-arrive";
+  const latest = state.history[0];
+  const isLatestTile = latest && latest.tile && latest.tile.id === entry.tile.id;
+  const tileClass = claimed
+    ? (latest && latest.kind === "call" && isLatestTile ? "tile-taken" : "tile-taken-static")
+    : (latest && latest.kind === "discard" && isLatestTile ? "discard-arrive" : "discard-resting");
   let detail = state.players[entry.from].name + " discarded";
   if (claimed) {
     detail += '<br><span class="discard-taken">TAKEN BY ' + SHORT_NAMES[riverEntry.claimedBy] + ' · ' + riverEntry.claimedWith.toUpperCase() + '</span>';
@@ -954,7 +958,7 @@ function renderClaimTray() {
 
 function actionDescription(event) {
   const actor = PLAYER_NAMES[event.actor];
-  if (event.kind === "dealer") return { icon: "MANO", text: actor + " leads the hand with 17 tiles." };
+  if (event.kind === "dealer") return { icon: "MANO", text: actor + " leads." };
   if (event.kind === "discard") return { icon: "THROW", text: actor + " discarded ", tile: event.tile };
   if (event.kind === "call") {
     return { icon: "CALL", text: actor + " took ", tile: event.tile, after: " from " + PLAYER_NAMES[event.source] + " · " + event.call };
@@ -965,8 +969,8 @@ function actionDescription(event) {
   if (event.kind === "draw") {
     return { icon: "DRAW", text: actor + (event.hidden ? " drew from the wall." : " drew "), tile: event.hidden ? null : event.tile };
   }
-  if (event.kind === "flower") return { icon: "FLORES", text: actor + " exposed ", tile: event.tile, after: " as Flores · replacement from back wall" };
-  if (event.kind === "secret-kang") return { icon: "KANG", text: actor + " declared Secret Kang · each opponent pays 1 point." };
+  if (event.kind === "flower") return { icon: "FLORES", text: actor + " exposed ", tile: event.tile, after: " · back-wall replacement" };
+  if (event.kind === "secret-kang") return { icon: "KANG", text: actor + " declared Secret Kang." };
   if (event.kind === "sagasa") return { icon: "KANG", text: actor + " upgraded a Pung to Kang · ", tile: event.tile };
   if (event.kind === "win") return { icon: "WIN", text: (event.actor === 0 ? "You win with " : actor + " wins with ") + event.winType + (event.tile ? " on " : "."), tile: event.tile };
   return { icon: "WALL", text: "The wall is exhausted. Hand ends in a draw." };
@@ -978,12 +982,13 @@ function renderActivityFeed() {
     feed.innerHTML = '<div class="activity-empty">The table action trail will appear here.</div>';
     return;
   }
-  feed.innerHTML = state.history.slice(0, 4).map(function (event, index) {
+  const events = state.history.slice(0, 2).reverse();
+  feed.innerHTML = events.map(function (event, index) {
     const description = actionDescription(event);
     const tile = description.tile ? tinyFace(description.tile, "activity-tile") : "";
-    return '<div class="activity-item kind-' + event.kind + (index === 0 ? " activity-new" : "") + '">' +
+    return '<div class="activity-item kind-' + event.kind + (index === events.length - 1 ? " activity-new" : "") + '">' +
       '<span class="activity-kind">' + description.icon + '</span>' +
-      '<span class="activity-copy">' + description.text + tile + (description.after || "") + '</span></div>';
+      '<span class="activity-copy"><span class="activity-text">' + description.text + '</span>' + tile + '<span class="activity-after">' + (description.after || "") + '</span></span></div>';
   }).join("");
 }
 
@@ -1037,8 +1042,6 @@ function render() {
   byId("roundLabel").textContent = "HAND " + state.handNumber;
   byId("wallCount").textContent = "WALL " + remainingWall();
   byId("statusText").textContent = state.message;
-  const playerCanAct = (state.turn === 0 && state.phase === "discard") || (state.phase === "claim" && state.claimOptions.length > 0);
-  byId("statusPill").classList.toggle("is-your-turn", playerCanAct);
   renderOpponent(2);
   renderOpponent(1);
   renderOpponent(3);

@@ -39,8 +39,9 @@
     <section class="table-card" aria-label="Mahjong table">
       <div class="table-toolbar">
         <div class="table-caption"><span class="table-caption-mark">✦</span> THE TABLE <span class="table-divider">/</span> <span id="wallCount">WALL 144</span></div>
-        <div id="statusPill" class="status-pill"><span class="status-dot"></span><span id="statusText">Shuffling the tiles…</span></div>
+        <div id="activityFeed" class="activity-feed" role="log" aria-label="Recent table actions" aria-live="polite"></div>
       </div>
+      <div id="statusText" class="sr-only" role="status">Shuffling the tiles…</div>
 
       <div class="play-mat">
         <section id="seat-2" class="seat seat-top" aria-label="Opponent across the table"></section>
@@ -53,8 +54,6 @@
         <section id="seat-3" class="seat seat-right" aria-label="Opponent on your right"></section>
         <section id="seat-0" class="seat seat-bottom" aria-label="Your seat"></section>
       </div>
-
-      <div id="activityFeed" class="activity-feed" role="log" aria-label="Recent table actions" aria-live="polite"></div>
 
       <div class="action-bar">
         <div class="action-hint" id="actionHint">Your table is ready.</div>
