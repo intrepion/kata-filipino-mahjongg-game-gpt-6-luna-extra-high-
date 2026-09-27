@@ -858,8 +858,10 @@ function renderMelds(player) {
         return tinyFace(tile, isTakenTile ? "taken-origin" : "");
       }).join("");
     const name = meld.type === "kong" ? (meld.concealed ? "SECRET KANG" : "KANG") : meld.type.toUpperCase();
-    const source = meld.fromIndex === undefined ? "" : '<span class="meld-source">← ' + SHORT_NAMES[meld.fromIndex] + '</span>';
-    return '<div class="meld-block' + (source ? " called-meld" : "") + '" title="' + name + source + '"><span class="meld-name">' + name + '</span>' + source + face + '</div>';
+    const sourceName = meld.fromIndex === undefined ? "" : SHORT_NAMES[meld.fromIndex];
+    const source = sourceName ? '<span class="meld-source">← ' + sourceName + '</span>' : "";
+    const title = name + (sourceName ? " · from " + PLAYER_NAMES[meld.fromIndex] : "");
+    return '<div class="meld-block' + (source ? " called-meld" : "") + '" title="' + title + '"><span class="meld-name">' + name + '</span>' + source + face + '</div>';
   }).join("");
 }
 
