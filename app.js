@@ -492,22 +492,21 @@ function resolveClaims(userOption) {
     startTurn((state.turn + 1) % 4);
     return;
   }
-  if (userOption && userOption.type !== "pass" && winner.player !== 0) {
-    state.message = "Your call was beaten by " + winner.option.label + ".";
-  }
-  executeClaim(winner.player, winner.option);
+  const beatenCall = userOption && userOption.type !== "pass" && winner.player !== 0 ? userOption : null;
+  executeClaim(winner.player, winner.option, beatenCall);
 }
 
-function executeClaim(playerIndex, option) {
+function executeClaim(playerIndex, option, beatenCall) {
   const player = state.players[playerIndex];
   const pending = state.pending;
   if (!pending) return;
+  const callNotice = beatenCall ? "Your " + beatenCall.label + " was beaten by " + option.label + ". " : "";
   if (option.type === "win") {
     pending.entry.claimed = true;
     pending.entry.claimedBy = playerIndex;
     pending.entry.claimedWith = "Todas";
     recordAction({ kind: "call", actor: playerIndex, source: pending.from, tile: pending.tile, call: "TODAS · WIN" });
-    finishHand(playerIndex, "Todas", pending.from, pending.tile);
+    finishHand(playerIndex, "Todas", pending.from, pending.tile, beatenCall);
     return;
   }
   pending.entry.claimed = true;
@@ -523,8 +522,8 @@ function executeClaim(playerIndex, option) {
       fromIndex: pending.from,
       claimedTileId: pending.tile.id
     });
-    state.message = player.name + " takes " + tileName(pending.tile) + " from " + state.players[pending.from].name + " with Kang.";
-    recordAction({ kind: "call", actor: playerIndex, source: pending.from, tile: pending.tile, call: "KANG" });
+    state.message = callNotice + player.name + " takes " + tileName(pending.tile) + " from " + state.players[pending.from].name + " with Kang.";
+    recordAction({ kind: "call", actor: playerIndex, source: pending.from, tile: pending.tile, call: "KANG", beatenCall: beatenCall ? { label: beatenCall.label, beatenBy: option.label } : null });
     state.pending = null;
     state.turn = playerIndex;
     state.phase = "discard";
@@ -563,8 +562,8 @@ function executeClaim(playerIndex, option) {
     });
     player.melds[player.melds.length - 1].tiles.sort(function (a, b) { return tileIndex(a) - tileIndex(b); });
   }
-  state.message = player.name + " takes " + tileName(pending.tile) + " from " + state.players[pending.from].name + " with " + option.label + ".";
-  recordAction({ kind: "call", actor: playerIndex, source: pending.from, tile: pending.tile, call: option.label.toUpperCase() });
+  state.message = callNotice + player.name + " takes " + tileName(pending.tile) + " from " + state.players[pending.from].name + " with " + option.label + ".";
+  recordAction({ kind: "call", actor: playerIndex, source: pending.from, tile: pending.tile, call: option.label.toUpperCase(), beatenCall: beatenCall ? { label: beatenCall.label, beatenBy: option.label } : null });
   state.pending = null;
   state.turn = playerIndex;
   state.phase = "discard";
@@ -743,7 +742,7 @@ function declareKong(playerIndex, option) {
   }
 }
 
-function finishHand(winnerIndex, winType, discarderIndex, winningTile) {
+function finishHand(winnerIndex, winType, discarderIndex, winningTile, beatenCall) {
   if (!state || state.phase === "finished") return;
   const winner = state.players[winnerIndex];
   const winningHand = winner.hand.slice();
@@ -773,8 +772,8 @@ function finishHand(winnerIndex, winType, discarderIndex, winningTile) {
     patterns: patterns,
     payouts: payouts
   };
-  state.message = winner.name + " wins with " + winType + "!";
-  recordAction({ kind: "win", actor: winnerIndex, tile: winningTile || null, winType: winType });
+  state.message = (beatenCall ? "Your " + beatenCall.label + " was beaten by " + winType + ". " : "") + winner.name + " wins with " + winType + "!";
+  recordAction({ kind: "win", actor: winnerIndex, tile: winningTile || null, winType: winType, beatenCall: beatenCall ? { label: beatenCall.label, beatenBy: winType } : null });
   render();
   showResult();
 }
@@ -963,7 +962,10 @@ function actionDescription(event) {
   if (event.kind === "dealer") return { icon: "MANO", text: actor + " leads." };
   if (event.kind === "discard") return { icon: "THROW", text: actor + " discarded ", tile: event.tile };
   if (event.kind === "call") {
-    return { icon: "CALL", text: actor + " took ", tile: event.tile, after: " from " + PLAYER_NAMES[event.source] + " · " + event.call };
+    const notice = event.beatenCall
+      ? "Your " + event.beatenCall.label + " was beaten by " + event.beatenCall.beatenBy + ". " + actor + " took "
+      : actor + " took ";
+    return { icon: "CALL", text: notice, tile: event.tile, after: " from " + PLAYER_NAMES[event.source] + (event.beatenCall ? "" : " · " + event.call) };
   }
   if (event.kind === "draw" && event.replacement) {
     return { icon: "BACK", text: actor + " took a replacement from the back wall" + (event.tile ? ": " : "."), tile: event.tile };
@@ -974,7 +976,10 @@ function actionDescription(event) {
   if (event.kind === "flower") return { icon: "FLORES", text: actor + " exposed ", tile: event.tile, after: " · back-wall replacement" };
   if (event.kind === "secret-kang") return { icon: "KANG", text: actor + " declared Secret Kang." };
   if (event.kind === "sagasa") return { icon: "KANG", text: actor + " upgraded a Pung to Kang · ", tile: event.tile };
-  if (event.kind === "win") return { icon: "WIN", text: (event.actor === 0 ? "You win with " : actor + " wins with ") + event.winType + (event.tile ? " on " : "."), tile: event.tile };
+  if (event.kind === "win") {
+    const notice = event.beatenCall ? "Your " + event.beatenCall.label + " was beaten by " + event.beatenCall.beatenBy + ". " : "";
+    return { icon: "WIN", text: notice + (event.actor === 0 ? "You win with " : actor + " wins with ") + event.winType + (event.tile ? " on " : "."), tile: event.tile };
+  }
   return { icon: "WALL", text: "The wall is exhausted. Hand ends in a draw." };
 }
 
