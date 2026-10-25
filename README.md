@@ -1,5 +1,9 @@
 # Pinoy Mahjong
 
+## Play online
+
+[Play Pinoy Mahjong](https://intrepion.github.io/kata-filipino-mahjongg-game-gpt-6-luna-extra-high-/) — free, playable in your browser.
+
 A small, browser-playable Filipino Mahjong game. You take one seat at a four-player table and play against three computer opponents.
 
 ## Play
