@@ -25,3 +25,7 @@ Jokers, a pot, and house-specific payment rules are not included. Win payouts us
 - [Filipino Mahjong rules and table guide](https://www.mahjongwiki.com/filipino-mahjong/) summarizes the common 16-tile structure and notes regional and family variation.
 - [FilipinoMahjong.org tutorial](https://filipinomahjong.org/tutorial) covers 16 tiles, replacement Flores, claim priority, and special hands.
 - [tsumo Filipino Mahjong rules](https://tsumo.io/mahjong-rules/filipino) describes its named Philippine 16-tile profile, including flower replacements, Siete Pares, and multiplier scoring.
+
+## Arcade metadata
+
+See [docs/arcade-metadata.md](docs/arcade-metadata.md) for the game-owned manifest and screenshot provenance.
