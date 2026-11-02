@@ -1,6 +1,47 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "gameId": "kata-filipino-mahjongg-game-gpt-6-luna-extra-high-",
   "playUrl": "https://intrepion.github.io/kata-filipino-mahjongg-game-gpt-6-luna-extra-high-/",
-  "screenshots": []
+  "screenshots": [
+    {
+      "path": "arcade/screenshots/ci-20261102-01.jpg",
+      "sha256": "b2949d090ead0dc9c37d75224ac7dac752287f2ffa5ae6108152d9ecc9dc1d65",
+      "alt": "Pinoy Mahjong gameplay, view 1",
+      "provenance": {
+        "kind": "ci_gameplay_capture",
+        "sourcePath": "arcade/capture-evidence/ci-20261102-01.png",
+        "sourceSha256": "94ffa413ab10badca36577d0b51e31a35daef8c7217a894942c9c1b42bd4eadc",
+        "captureCommit": "050304953a2481f382d5f5e75117765ff3409ba5",
+        "workflowRunId": "41403925835",
+        "inputHashes": {
+          "index.html": "1e51e22e364e467e3f0d92feb6b700378fbeeea83307fcefde925966e550f9c2",
+          "style.css": "c3e82a2f2d0e7714aa54d17755994bd3af65fc13679c4279847d6bd6faaa0fb7",
+          "app.js": "78f73e31eef40b573b78b538e5557eff0b3158cd2907f1bcebf46d9c1a68ecdc"
+        },
+        "publishedFilesVerifiedAt": "2026-11-02T19:01:20Z",
+        "captureRecordPath": "arcade/capture-evidence/ci-20261102-record.json",
+        "captureRecordSha256": "f30f9c1b41149b8f5d91f73430b5bf6b181c5969375d64bf5d289d7ab122fa16"
+      }
+    },
+    {
+      "path": "arcade/screenshots/ci-20261102-02.jpg",
+      "sha256": "f90954cae4b5b0e9e83f958f4aecb32e19aa60345d8f8a405c7ae45f31424d72",
+      "alt": "Pinoy Mahjong gameplay, view 2",
+      "provenance": {
+        "kind": "ci_gameplay_capture",
+        "sourcePath": "arcade/capture-evidence/ci-20261102-02.png",
+        "sourceSha256": "5b96975c5025f2784ab40e40c23a86bb19015c14741147ef5621d243c1883c62",
+        "captureCommit": "050304953a2481f382d5f5e75117765ff3409ba5",
+        "workflowRunId": "41403925835",
+        "inputHashes": {
+          "index.html": "1e51e22e364e467e3f0d92feb6b700378fbeeea83307fcefde925966e550f9c2",
+          "style.css": "c3e82a2f2d0e7714aa54d17755994bd3af65fc13679c4279847d6bd6faaa0fb7",
+          "app.js": "78f73e31eef40b573b78b538e5557eff0b3158cd2907f1bcebf46d9c1a68ecdc"
+        },
+        "publishedFilesVerifiedAt": "2026-11-02T19:01:20Z",
+        "captureRecordPath": "arcade/capture-evidence/ci-20261102-record.json",
+        "captureRecordSha256": "f30f9c1b41149b8f5d91f73430b5bf6b181c5969375d64bf5d289d7ab122fa16"
+      }
+    }
+  ]
 }

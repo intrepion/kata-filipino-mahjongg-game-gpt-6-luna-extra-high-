@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "workflowCommit": "cdb35ce88a0a51440499d9516f9e96c682fccc3b",
+  "sourceCommit": "050304953a2481f382d5f5e75117765ff3409ba5",
+  "runId": "41403925835",
+  "url": "http://127.0.0.1:4219/",
+  "inputs": {
+    "index.html": "1e51e22e364e467e3f0d92feb6b700378fbeeea83307fcefde925966e550f9c2",
+    "style.css": "c3e82a2f2d0e7714aa54d17755994bd3af65fc13679c4279847d6bd6faaa0fb7",
+    "app.js": "78f73e31eef40b573b78b538e5557eff0b3158cd2907f1bcebf46d9c1a68ecdc"
+  },
+  "browser": "153.0.8010.12",
+  "viewport": {
+    "width": 1280,
+    "height": 1000
+  },
+  "screenshots": [
+    "pinoy-mahjong-01.png",
+    "pinoy-mahjong-02.png"
+  ]
+}
